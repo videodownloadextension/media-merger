@@ -1,0 +1,40 @@
+# Numerous always-ignore extensions
+*.diff
+*.err
+*.orig
+*.log
+*.rej
+*.swo
+*.swp
+*.vi
+*.js.map
+*~
+*.sass-cache
+
+# OS or Editor folders
+.DS_Store
+.cache
+.project
+.settings
+.tmproj
+nbproject
+Thumbs.db
+
+# NPM packages folder.
+node_modules/
+
+# Brunch folder for temporary files.
+tmp/
+temp/
+
+# Public output folder
+public/
+dist/*
+build/*
+
+bower_components/
+bower_components*
+bower.json*
+package-lock.json
+
+ffmpeg.exe
