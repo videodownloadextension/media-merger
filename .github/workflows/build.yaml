@@ -54,7 +54,7 @@ jobs:
         pyinstaller `
           --onefile `
           --windowed `
-          --name "音视频合并工具_Windows" `
+          --name "media-merger_Windows" `
           --add-data "ffmpeg.exe;." `
           --hidden-import tkinter `
           --hidden-import tkinter.ttk `
@@ -67,12 +67,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Windows-Executable
-        path: dist/音视频合并工具_Windows.exe
+        path: dist/media-merger_Windows.exe
         if-no-files-found: error
     
     - name: Get file size
       run: |
-        $size = [math]::Round((Get-Item "dist/音视频合并工具_Windows.exe").Length / 1MB, 2)
+        $size = [math]::Round((Get-Item "dist/media-merger_Windows.exe").Length / 1MB, 2)
         Write-Host "Windows executable size: $size MB"
 
   build-linux:
@@ -124,7 +124,7 @@ jobs:
         # Linux 版本不需要 --windowed 标志
         pyinstaller \
           --onefile \
-          --name "音视频合并工具_Linux" \
+          --name "media-merger_Linux" \
           --add-data "ffmpeg:." \
           --hidden-import tkinter \
           --hidden-import tkinter.ttk \
@@ -137,12 +137,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Linux-Executable
-        path: dist/音视频合并工具_Linux
+        path: dist/media-merger_Linux
         if-no-files-found: error
     
     - name: Get file size
       run: |
-        size=$(du -h "dist/音视频合并工具_Linux" | cut -f1)
+        size=$(du -h "dist/media-merger_Linux" | cut -f1)
         echo "Linux executable size: $size"
 
   build-macos:
@@ -191,7 +191,7 @@ jobs:
         pyinstaller \
           --onefile \
           --windowed \
-          --name "音视频合并工具_macOS" \
+          --name "media-merger_macOS" \
           --add-data "ffmpeg:." \
           --hidden-import tkinter \
           --hidden-import tkinter.ttk \
@@ -204,12 +204,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: macOS-Executable
-        path: dist/音视频合并工具_macOS
+        path: dist/media-merger_macOS
         if-no-files-found: error
     
     - name: Get file size
       run: |
-        size=$(du -h "dist/音视频合并工具_macOS" | cut -f1)
+        size=$(du -h "dist/media-merger_macOS" | cut -f1)
         echo "macOS executable size: $size"
   create-release:
     name: Create Release
@@ -227,9 +227,9 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          artifacts/Windows-Executable/音视频合并工具_Windows.exe
-          artifacts/Linux-Executable/音视频合并工具_Linux
-          artifacts/macOS-Executable/音视频合并工具_macOS
+          artifacts/Windows-Executable/media-merger_Windows.exe
+          artifacts/Linux-Executable/media-merger_Linux
+          artifacts/macOS-Executable/media-merger_macOS
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
       env:
