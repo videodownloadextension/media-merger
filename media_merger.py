@@ -162,25 +162,58 @@ class SimpleMediaMerger:
         
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        
+
     def get_ffmpeg_path(self):
-        """获取 ffmpeg 可执行文件路径"""
+        """获取 ffmpeg 可执行文件路径（跨平台支持）"""
+        import sys
+        import platform
+        
+        # 获取当前操作系统
+        system = platform.system().lower()
+        
         # 首先检查是否在打包环境中
         if getattr(sys, 'frozen', False):
-            # 打包后的环境
-            ffmpeg_exe = get_resource_path('ffmpeg.exe')
+            # 打包后的环境，ffmpeg 在临时目录
+            if system == 'windows':
+                ffmpeg_exe = get_resource_path('ffmpeg.exe')
+            elif system == 'linux':
+                ffmpeg_exe = get_resource_path('ffmpeg')
+            elif system == 'darwin':  # macOS
+                ffmpeg_exe = get_resource_path('ffmpeg')
+            else:
+                ffmpeg_exe = None
+            
+            if ffmpeg_exe and os.path.exists(ffmpeg_exe):
+                return ffmpeg_exe
+            
+            # 也检查程序所在目录（如果用户手动放置了 ffmpeg）
+            app_dir = os.path.dirname(sys.executable)
+            if system == 'windows':
+                ffmpeg_exe = os.path.join(app_dir, 'ffmpeg.exe')
+            else:
+                ffmpeg_exe = os.path.join(app_dir, 'ffmpeg')
+            
             if os.path.exists(ffmpeg_exe):
                 return ffmpeg_exe
+        # 开发环境，检查当前目录和系统 PATH
+        import shutil
+        
+        # 检查当前目录
+        if system == 'windows':
+            if os.path.exists('ffmpeg.exe'):
+                return 'ffmpeg.exe'
         else:
-            # 开发环境，检查系统 PATH
-            import shutil
-            ffmpeg_path = shutil.which('ffmpeg')
-            if ffmpeg_path:
-                return ffmpeg_path
+            if os.path.exists('ffmpeg'):
+                return './ffmpeg'
+        
+        # 检查系统 PATH
+        ffmpeg_path = shutil.which('ffmpeg')
+        if ffmpeg_path:
+            return ffmpeg_path
         
         # 如果都找不到，返回 None，后续会提示用户
         return None
-        
+       
     def setup_ui(self):
         """设置用户界面"""
         style = ttk.Style()
