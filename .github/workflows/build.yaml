@@ -211,7 +211,6 @@ jobs:
       run: |
         size=$(du -h "dist/音视频合并工具_macOS" | cut -f1)
         echo "macOS executable size: $size"
-
   create-release:
     name: Create Release
     needs: [build-windows, build-linux, build-macos]
@@ -224,11 +223,6 @@ jobs:
       with:
         path: artifacts
     
-    - name: List downloaded files
-      run: |
-        echo "Downloaded artifacts:"
-        find artifacts -type f -name "*" | sort
-    
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -238,28 +232,5 @@ jobs:
           artifacts/macOS-Executable/音视频合并工具_macOS
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
-        body: |
-          ## 🎉 音视频合并工具 ${{ github.ref_name }}
-          
-          ### 新功能
-          - 自动打包生成多平台可执行文件
-          - 内置 ffmpeg，无需单独安装
-          - 绿色便携版，配置文件保存在程序目录
-          - 基于文件大小的准确进度显示
-          
-          ### 下载说明
-          
-          #### Windows 用户
-          下载 `音视频合并工具_Windows.exe`，双击即可运行
-          
-          #### Linux 用户
-          下载 `音视频合并工具_Linux`，在终端运行：
-          ```bash
-          chmod +x 音视频合并工具_Linux
-          ./音视频合并工具_Linux
-          ```
-          #### macOS 用户
-          ```bash
-          chmod +x 音视频合并工具_macOS
-          ./音视频合并工具_macOS
-          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
