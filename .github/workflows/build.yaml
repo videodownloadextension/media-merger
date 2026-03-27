@@ -1,0 +1,262 @@
+name: Build Multi-Platform with FFmpeg
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller
+    
+    - name: Download ffmpeg for Windows
+      run: |
+        # 下载 ffmpeg Windows 版本
+        $ffmpeg_url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+        $ffmpeg_zip = "ffmpeg.zip"
+        Write-Host "Downloading ffmpeg from $ffmpeg_url"
+        Invoke-WebRequest -Uri $ffmpeg_url -OutFile $ffmpeg_zip
+        
+        # 解压
+        Write-Host "Extracting ffmpeg..."
+        Expand-Archive -Path $ffmpeg_zip -DestinationPath "ffmpeg_temp"
+        
+        # 查找并复制 ffmpeg.exe
+        $ffmpeg_exe = Get-ChildItem -Path "ffmpeg_temp" -Filter "ffmpeg.exe" -Recurse | Select-Object -First 1
+        Copy-Item $ffmpeg_exe.FullName -Destination "ffmpeg.exe"
+        
+        # 显示 ffmpeg 版本
+        Write-Host "FFmpeg version:"
+        .\ffmpeg.exe -version | Select-Object -First 1
+        
+        # 清理临时文件
+        Remove-Item $ffmpeg_zip -Force
+        Remove-Item "ffmpeg_temp" -Recurse -Force
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller `
+          --onefile `
+          --windowed `
+          --name "音视频合并工具_Windows" `
+          --add-data "ffmpeg.exe;." `
+          --hidden-import tkinter `
+          --hidden-import tkinter.ttk `
+          --hidden-import tkinter.scrolledtext `
+          --clean `
+          --noconfirm `
+          media_merger.py
+    
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Windows-Executable
+        path: dist/音视频合并工具_Windows.exe
+        if-no-files-found: error
+    
+    - name: Get file size
+      run: |
+        $size = [math]::Round((Get-Item "dist/音视频合并工具_Windows.exe").Length / 1MB, 2)
+        Write-Host "Windows executable size: $size MB"
+
+  build-linux:
+    name: Build Linux Executable
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller
+    
+    - name: Download ffmpeg for Linux (static build)
+      run: |
+        # 下载 Linux 静态编译的 ffmpeg
+        # 使用 johnvansickle 的 ffmpeg 静态构建版本
+        FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        echo "Downloading ffmpeg from $FFMPEG_URL"
+        wget -q $FFMPEG_URL -O ffmpeg.tar.xz
+        
+        # 解压
+        echo "Extracting ffmpeg..."
+        tar -xf ffmpeg.tar.xz
+        
+        # 查找并复制 ffmpeg
+        FFMPEG_DIR=$(find . -maxdepth 1 -name "ffmpeg-*-amd64-static" -type d | head -1)
+        cp "$FFMPEG_DIR/ffmpeg" .
+        
+        # 设置可执行权限
+        chmod +x ffmpeg
+        
+        # 显示 ffmpeg 版本
+        echo "FFmpeg version:"
+        ./ffmpeg -version | head -1
+        
+        # 清理
+        rm -rf ffmpeg.tar.xz $FFMPEG_DIR
+    
+    - name: Build with PyInstaller
+      run: |
+        # Linux 版本不需要 --windowed 标志
+        pyinstaller \
+          --onefile \
+          --name "音视频合并工具_Linux" \
+          --add-data "ffmpeg:." \
+          --hidden-import tkinter \
+          --hidden-import tkinter.ttk \
+          --hidden-import tkinter.scrolledtext \
+          --clean \
+          --noconfirm \
+          media_merger.py
+    
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux-Executable
+        path: dist/音视频合并工具_Linux
+        if-no-files-found: error
+    
+    - name: Get file size
+      run: |
+        size=$(du -h "dist/音视频合并工具_Linux" | cut -f1)
+        echo "Linux executable size: $size"
+
+  build-macos:
+    name: Build macOS Executable
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller
+    
+    - name: Download ffmpeg for macOS
+      run: |
+        # 使用 Homebrew 安装 ffmpeg（但会安装在系统目录，不能直接打包）
+        # 改为下载官方编译版本
+        FFMPEG_URL="https://evermeet.cx/ffmpeg/ffmpeg-6.1.1.zip"
+        echo "Downloading ffmpeg from $FFMPEG_URL"
+        curl -L -o ffmpeg.zip $FFMPEG_URL
+        
+        # 解压
+        echo "Extracting ffmpeg..."
+        unzip -q ffmpeg.zip
+        
+        # 设置可执行权限
+        chmod +x ffmpeg
+        
+        # 显示 ffmpeg 版本
+        echo "FFmpeg version:"
+        ./ffmpeg -version | head -1
+        
+        # 清理
+        rm ffmpeg.zip
+    
+    - name: Build with PyInstaller
+      run: |
+        # macOS 版本使用 --windowed 创建 .app 包
+        pyinstaller \
+          --onefile \
+          --windowed \
+          --name "音视频合并工具_macOS" \
+          --add-data "ffmpeg:." \
+          --hidden-import tkinter \
+          --hidden-import tkinter.ttk \
+          --hidden-import tkinter.scrolledtext \
+          --clean \
+          --noconfirm \
+          media_merger.py
+    
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macOS-Executable
+        path: dist/音视频合并工具_macOS
+        if-no-files-found: error
+    
+    - name: Get file size
+      run: |
+        size=$(du -h "dist/音视频合并工具_macOS" | cut -f1)
+        echo "macOS executable size: $size"
+
+  create-release:
+    name: Create Release
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: List downloaded files
+      run: |
+        echo "Downloaded artifacts:"
+        find artifacts -type f -name "*" | sort
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/Windows-Executable/音视频合并工具_Windows.exe
+          artifacts/Linux-Executable/音视频合并工具_Linux
+          artifacts/macOS-Executable/音视频合并工具_macOS
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## 🎉 音视频合并工具 ${{ github.ref_name }}
+          
+          ### 新功能
+          - 自动打包生成多平台可执行文件
+          - 内置 ffmpeg，无需单独安装
+          - 绿色便携版，配置文件保存在程序目录
+          - 基于文件大小的准确进度显示
+          
+          ### 下载说明
+          
+          #### Windows 用户
+          下载 `音视频合并工具_Windows.exe`，双击即可运行
+          
+          #### Linux 用户
+          下载 `音视频合并工具_Linux`，在终端运行：
+          ```bash
+          chmod +x 音视频合并工具_Linux
+          ./音视频合并工具_Linux
