@@ -260,3 +260,9 @@ jobs:
           ```bash
           chmod +x 音视频合并工具_Linux
           ./音视频合并工具_Linux
+          ```
+          #### macOS 用户
+          ```bash
+          chmod +x 音视频合并工具_macOS
+          ./音视频合并工具_macOS
+          ```
