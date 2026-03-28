@@ -441,7 +441,7 @@ class SimpleMediaMerger:
             return 100 * 1024 * 1024
     
     def merge_with_progress(self, video_path, audio_path, output_path):
-        """使用 FFmpeg 合并，基于文件大小显示进度"""
+        """使用 FFmpeg 合并，基于文件大小显示进度（编码修复版）"""
         try:
             if not self.ffmpeg_path or not os.path.exists(self.ffmpeg_path):
                 return False, "未找到 ffmpeg，请确保程序完整安装"
@@ -461,22 +461,47 @@ class SimpleMediaMerger:
                 output_path
             ]
             
+            # 使用二进制模式避免编码问题
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
                 bufsize=1,
-                universal_newlines=True,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
             start_time = datetime.now()
             
+            # 读取 stdout 的线程
+            def read_stdout():
+                for line_bytes in iter(process.stdout.readline, b''):
+                    try:
+                        # 尝试 UTF-8 解码
+                        line = line_bytes.decode('utf-8', errors='ignore')
+                    except:
+                        # 如果失败，使用 GBK
+                        try:
+                            line = line_bytes.decode('gbk', errors='ignore')
+                        except:
+                            line = line_bytes.decode('latin-1', errors='ignore')
+                    self.process_ffmpeg_output(line)
+                process.stdout.close()
+            
+            def read_stderr():
+                for line_bytes in iter(process.stderr.readline, b''):
+                    # 不显示 stderr，避免干扰
+                    pass
+            
+            import threading
+            stdout_thread = threading.Thread(target=read_stdout, daemon=True)
+            stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+            stdout_thread.start()
+            stderr_thread.start()
+            
+            # 监控文件大小进度
             while process.poll() is None and not self.stop_processing:
                 if os.path.exists(output_path):
                     current_size = os.path.getsize(output_path)
-                    
                     if estimated_size > 0:
                         percent = (current_size / estimated_size) * 100
                         percent = min(percent, 99.5)
@@ -484,7 +509,6 @@ class SimpleMediaMerger:
                         elapsed = (datetime.now() - start_time).total_seconds()
                         if elapsed > 0 and current_size > 0:
                             speed = current_size / (1024 * 1024) / elapsed
-                            
                             if speed > 0:
                                 remaining_size = max(0, estimated_size - current_size)
                                 remaining_seconds = remaining_size / (1024 * 1024) / speed
@@ -506,6 +530,7 @@ class SimpleMediaMerger:
                 
                 time.sleep(0.3)
             
+            # 等待进程结束
             process.wait()
             
             if os.path.exists(output_path) and not self.stop_processing:
@@ -517,14 +542,23 @@ class SimpleMediaMerger:
             if process.returncode == 0:
                 return True, "成功"
             else:
-                stderr = process.stderr.read()
-                error_lines = stderr.strip().split('\n')
-                error_msg = error_lines[-1] if error_lines else "未知错误"
-                return False, error_msg
-                
+                return False, "FFmpeg 处理失败"
+                    
         except Exception as e:
             return False, str(e)
-    
+
+    def process_ffmpeg_output(self, line):
+        """处理 FFmpeg 输出行"""
+        line = line.strip()
+        
+        # 解析速度，更新进度详情
+        if line.startswith('speed='):
+            try:
+                speed_str = line.split('=')[1].replace('x', '')
+                speed = float(speed_str)
+                # 可以在这里更新速度显示，但主要进度已经由文件大小监控处理
+            except:
+                pass
     def scan_and_match_files(self, folder):
         """扫描文件夹并匹配相同文件名的音视频文件"""
         videos = {}
