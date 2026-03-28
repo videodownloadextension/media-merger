@@ -151,6 +151,8 @@ class SimpleMediaMerger:
         
         # 进度控制标志
         self.stop_processing = False
+        # 添加进程对象变量
+        self.current_process = None  # 保存当前运行的 FFmpeg 进程
         
         self.setup_ui()
         
@@ -405,6 +407,24 @@ class SimpleMediaMerger:
         self.stop_processing = True
         self.log("⚠️ 正在停止处理...")
         self.status_label.config(text="正在停止...")
+        # 强制终止 FFmpeg 进程
+        if self.current_process and self.current_process.poll() is None:
+            try:
+                # Windows 系统
+                if os.name == 'nt':
+                    # 使用 taskkill 强制终止进程树
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(self.current_process.pid)], 
+                                 capture_output=True)
+                else:
+                    # Linux/macOS
+                    self.current_process.terminate()
+                    time.sleep(1)
+                    if self.current_process and self.current_process.poll() is None:
+                        self.current_process.kill()
+                self.log("✅ 已强制停止 FFmpeg 进程")
+            except Exception as e:
+                self.log(f"⚠️ 停止进程时出错：{e}")
+
         
     def update_total_progress(self, current, total):
         """更新总体进度"""
@@ -466,9 +486,14 @@ class SimpleMediaMerger:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                text=True,
                 bufsize=1,
+                universal_newlines=True,
+                encoding='utf-8',
+                errors='ignore',
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
+            self.current_process = process
             
             start_time = datetime.now()
             
@@ -546,6 +571,9 @@ class SimpleMediaMerger:
                     
         except Exception as e:
             return False, str(e)
+        finally:
+            # 清理进程对象
+            self.current_process = None
 
     def process_ffmpeg_output(self, line):
         """处理 FFmpeg 输出行"""
