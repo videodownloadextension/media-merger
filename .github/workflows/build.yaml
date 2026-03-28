@@ -31,7 +31,8 @@ jobs:
       run: |
         # 下载 ffmpeg Windows 版本
         #$ffmpeg_url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-        $ffmpeg_url = "https://github.com/videodownloadextension/media-merger/releases/download/ffmpeg/ffmpeg-4.3.1-2020-10-01-essentials_build.7z"
+        #$ffmpeg_url = "https://github.com/videodownloadextension/media-merger/releases/download/ffmpeg/ffmpeg-4.3.1-2020-10-01-essentials_build.7z"
+        $ffmpeg_url = "https://github.com/GyanD/codexffmpeg/releases/download/4.3.1-2020-10-01/ffmpeg-4.3.1-2020-10-01-essentials_build.zip"
         #$ffmpeg_url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-4.4.1-essentials_build.zip"
         $ffmpeg_zip = "ffmpeg.zip"
         Write-Host "Downloading ffmpeg from $ffmpeg_url"
