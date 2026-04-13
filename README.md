@@ -1,3 +1,6 @@
+<img width="979" height="900" alt="image" src="https://github.com/user-attachments/assets/88aae011-0242-4fdf-8fbf-9de6ae777550" />
+
+
 ## 📋 功能特点：
 - 自动扫描文件夹中的视频和音频文件
 - 将相同文件名的文件配对合并（如：video.mp4 + video.mp3）
